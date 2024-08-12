@@ -14,6 +14,8 @@ export default function UploadPost() {
   const [images, setImages] = useState([]);
 
   const pickImage = async () => {
+
+    // image-picker
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -26,9 +28,10 @@ export default function UploadPost() {
     }
   };
 
+  // upload-post
   const uploadPost = async () => {
     if (!images.length || !caption) {
-      Alert.alert('Error', 'Please select at least one image and enter a caption.');
+      Alert.alert('エラー', '最低 1 つの画像を選択し、キャプションを入力してください。');
       return;
     }
   
@@ -59,7 +62,7 @@ export default function UploadPost() {
   
       console.log('Post saved to Firestore successfully.');
       setUploading(false);
-      Alert.alert('Success', 'Post uploaded successfully!');
+      Alert.alert('完成', 'この投稿をアプロードしました。');
       setImages([]);
       setCaption('');
     } catch (error) {
@@ -71,25 +74,33 @@ export default function UploadPost() {
 
   return (
     <ScrollView keyboardDismissMode='on-drag' style={[styles.container, { paddingTop: insets.top }]}>
+
+      {/* image-picker */}
       <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-        <Text style={styles.imagePickerText}>Pick an image</Text>
+        <Text style={styles.imagePickerText}>画像を選択</Text>
       </TouchableOpacity>
+
+      {/* image-preview */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewContainer}>
         {images.map((uri, index) => (
           <Image key={index} source={{ uri }} style={styles.imagePreview} />
         ))}
       </ScrollView>
+
+      {/* text */}
       <TextInput
         style={styles.captionInput}
-        placeholder="Enter a caption"
+        placeholder="テキストを入力。。。"
         value={caption}
         onChangeText={setCaption}
       />
+
+      {/* uploading */}
       <TouchableOpacity style={styles.uploadButton} onPress={uploadPost} disabled={uploading}>
         {uploading ? (
           <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
-          <Text style={styles.uploadButtonText}>Upload Post</Text>
+          <Text style={styles.uploadButtonText}>投稿をアップロード</Text>
         )}
       </TouchableOpacity>
     </ScrollView>

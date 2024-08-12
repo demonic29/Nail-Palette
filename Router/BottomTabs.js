@@ -16,7 +16,7 @@ const profileIcon = require('../assets/imgs/profile.png');
 
 const Tabs = createBottomTabNavigator();
 
-export default function BottomTabs() {
+export default function BottomTabs({fresh}) {
   return (
     <Tabs.Navigator
       initialRouteName="Home"
@@ -51,10 +51,12 @@ export default function BottomTabs() {
       })}
     >
       <Tabs.Screen
+        fresh={fresh}
         name="Home"
         component={Home}
       />
       <Tabs.Screen
+        
         name="Favorite"
         component={Favorite}
       />

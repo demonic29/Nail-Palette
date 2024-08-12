@@ -3,14 +3,16 @@ import React, { useState, useRef } from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-export default function PostCard({ navigation, post }) {
+export default function PostCard({ navigation, post, deletePost }) {
   const insets = useSafeAreaInsets();
   const [likeIcon, setLikeIcon] = useState(true);
   const [favoriteIcon, setFavoriteIcon] = useState(true);
   const [commentBox, setCommentBox] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const scrollViewRef = useRef(null);
 
   const commentBoxSection = () => {
@@ -50,19 +52,35 @@ export default function PostCard({ navigation, post }) {
     setActiveIndex(index);
   };
 
+  const handleImagePress = (imageUrl) => {
+    setSelectedImage(imageUrl);
+    setIsImagePreviewVisible(true);
+  };
+
+  const closeImagePreview = () => {
+    setIsImagePreviewVisible(false);
+    setSelectedImage(null);
+  };
+
   if (!post) {
     return <Text>Loading...</Text>;
   }
 
   return (
-    <View style={[styles.container]}>
+    <View style={styles.container}>
       <View style={styles.card}>
         <View style={styles.header}>
-          <TouchableOpacity>
-            <Image source={ require('../assets/imgs/user_icon.png') } style={{ width: 40, height: 40, borderRadius: 28 }} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-            <Text style={{ fontWeight: 'bold', fontSize: '18' }}>Nakino Aimi</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
+            <TouchableOpacity>
+              <Image source={require('../assets/imgs/user_icon.png')} style={{ width: 40, height: 40, borderRadius: 28 }} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+              <Text style={{ fontWeight: 'bold', fontSize: 18 }}>Nakino Aimi</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity onPress={() => navigation.navigate('MenuBar', {post,deletePost})}>
+            <Ionicons name="ellipsis-vertical" size={18} />
           </TouchableOpacity>
         </View>
 
@@ -74,15 +92,19 @@ export default function PostCard({ navigation, post }) {
           scrollEventThrottle={16}
           ref={scrollViewRef}
         >
-          {post.imageUrls && post.imageUrls.map((url, index) => (
-            <Image key={index} source={{ uri: url }} style={styles.postImage} />
-          ))}
+          {post.imageUrls &&
+            post.imageUrls.map((url, index) => (
+              <TouchableOpacity key={index} onPress={() => handleImagePress(url)}>
+                <Image source={{ uri: url }} style={styles.postImage} />
+              </TouchableOpacity>
+            ))}
         </ScrollView>
 
         <View style={styles.pagination}>
-          {post.imageUrls && post.imageUrls.map((_, index) => (
-            <View key={index} style={[styles.dot, activeIndex === index && styles.activeDot]} />
-          ))}
+          {post.imageUrls &&
+            post.imageUrls.map((_, index) => (
+              <View key={index} style={[styles.dot, activeIndex === index && styles.activeDot]} />
+            ))}
         </View>
 
         <View style={styles.cardBody}>
@@ -92,39 +114,48 @@ export default function PostCard({ navigation, post }) {
             </TouchableOpacity>
 
             <Modal
-              animationType='slide'
+              animationType="slide"
               visible={commentBox}
-              presentationStyle='pageSheet'
-              onRequestClose={() => {
-                setCommentBox(!commentBox);
-              }}
+              presentationStyle="pageSheet"
+              onRequestClose={() => setCommentBox(!commentBox)}
             >
               <View style={{ flex: 1 }}>
-                <View style={{ backgroundColor: 'white', flex: 1, justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingHorizontal: 20, paddingBottom: insets.bottom }}>
+                <View
+                  style={{
+                    backgroundColor: 'white',
+                    flex: 1,
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '100%',
+                    paddingHorizontal: 20,
+                    paddingBottom: insets.bottom,
+                  }}
+                >
                   <TouchableOpacity style={{ marginTop: 20 }} onPress={commentBoxSection}>
                     <Ionicons name="close-circle-outline" size={35} />
                   </TouchableOpacity>
                   <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <TextInput
-                      placeholder='コメントを追加。。。'
+                      placeholder="コメントを追加。。。"
                       style={{ borderWidth: 1, borderRadius: 15, width: '80%', paddingVertical: 15, paddingLeft: 15 }}
                     />
-                    <Ionicons size={18} name='send' style={{ borderWidth: 1, paddingVertical: 15, paddingHorizontal: 20, borderRadius: 15 }} />
+                    <Ionicons size={18} name="send" style={{ borderWidth: 1, paddingVertical: 15, paddingHorizontal: 20, borderRadius: 15 }} />
                   </View>
                 </View>
               </View>
             </Modal>
+
             <TouchableOpacity onPress={commentBoxSection}>
-              <Ionicons size={25} name='chatbubble-outline' />
+              <Ionicons size={25} name="chatbubble-outline" />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={onShare}>
-              <Ionicons size={25} name='share-outline' />
+              <Ionicons size={25} name="share-outline" />
             </TouchableOpacity>
           </View>
           <View style={styles.iconRow}>
             <TouchableOpacity>
-              <Ionicons size={25} name='person-outline' />
+              <Ionicons size={25} name="person-outline" />
             </TouchableOpacity>
             <TouchableOpacity onPress={favoriteIconChange}>
               <Ionicons size={25} name={favoriteIcon ? 'star-outline' : 'star'} color={favoriteIcon ? '#000' : '#8C51D7'} />
@@ -136,6 +167,16 @@ export default function PostCard({ navigation, post }) {
           <Text style={{ fontSize: 16, fontWeight: 'bold' }}>{post.caption}</Text>
         </View>
       </View>
+
+      <Modal visible={isImagePreviewVisible} transparent={true} onRequestClose={closeImagePreview}>
+        <TouchableOpacity style={styles.imagePreviewContainer} onPress={closeImagePreview}>
+          <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+          <TouchableOpacity style={[styles.closeButton, { top: insets.top + 20,
+    right: 20,}]} onPress={closeImagePreview}>
+            <Ionicons name="close" size={30} color="#FFF" />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -160,6 +201,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 10,
     gap: 20
   },
@@ -167,7 +209,6 @@ const styles = StyleSheet.create({
     width: width - 50,
     height: 350,
     borderRadius: 15,
-    // marginHorizontal: 20,
   },
   pagination: {
     flexDirection: 'row',
@@ -195,5 +236,20 @@ const styles = StyleSheet.create({
   },
   cardFooter: {
     marginTop: 10,
+  },
+  imagePreviewContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePreview: {
+    width: width - 20,
+    height: height / 2,
+    resizeMode: 'contain',
+  },
+  closeButton: {
+    position: 'absolute',
+   
   },
 });
