@@ -2,16 +2,17 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { firestore, storage } from '../firebase'; // Adjust the path to your firebaseConfig file
+import { auth, firestore, storage } from '../firebase/firebase'; // Adjust the path to your firebaseConfig file
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 
 export default function UploadPost() {
   const insets = useSafeAreaInsets();
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState([]);
+  const [user, setUser] = useState(null)
 
   const pickImage = async () => {
 
@@ -41,11 +42,26 @@ export default function UploadPost() {
     try {
       let imageUrls = [];
   
+      const user = auth.currentUser;
+      if (user) {
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log(userData);
+          setUser({
+            ...userData,
+            email: user.email,
+          });
+        }
+      }
+  
+      // image upload
       for (let i = 0; i < images.length; i++) {
         const response = await fetch(images[i]);
         const blob = await response.blob();
         const filename = images[i].substring(images[i].lastIndexOf('/') + 1);
-        const storageRef = ref(storage, `posts/${filename}`);
+        const storageRef = ref(storage, `${user.uid}/posts/${filename}`);
   
         console.log('Uploading image to storage...');
         await uploadBytes(storageRef, blob);
@@ -55,9 +71,12 @@ export default function UploadPost() {
   
       console.log('Image(s) uploaded successfully, saving to Firestore...');
       await addDoc(collection(firestore, 'posts'), {
-        imageUrls,
-        caption,
-        createdAt: serverTimestamp(),
+        userId: user.uid,          // Store the user ID
+        username: user.displayName, // Store the username (if available)
+        userImage: user.photoURL,   // Store the user image (if available)
+        imageUrls,                  // Store the image URLs
+        caption,                    // Store the caption
+        createdAt: serverTimestamp(), // Store the timestamp
       });
   
       console.log('Post saved to Firestore successfully.');
@@ -71,6 +90,7 @@ export default function UploadPost() {
       Alert.alert('Error', error.message);
     }
   };
+  
 
   return (
     <ScrollView keyboardDismissMode='on-drag' style={[styles.container, { paddingTop: insets.top }]}>

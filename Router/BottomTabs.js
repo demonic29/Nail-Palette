@@ -1,5 +1,5 @@
-import { Image } from 'react-native';
 import React from 'react';
+import { Image } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 // Components
@@ -16,56 +16,53 @@ const profileIcon = require('../assets/imgs/profile.png');
 
 const Tabs = createBottomTabNavigator();
 
-export default function BottomTabs({fresh}) {
+export default function BottomTabs() {
   return (
     <Tabs.Navigator
       initialRouteName="Home"
       screenOptions={({ route }) => ({
         tabBarActiveTintColor: '#8C51D7',
-        tabBarShowLabel : false,
-
+        tabBarShowLabel: false,
         tabBarStyle: {
-            position: 'absolute',
-            bottom: 40,
-            borderRadius: 50,
-            shadowColor: '#000',
-            shadowOpacity: 0.1,
-            elevation: 5,
-            marginHorizontal: 15,
+          position: 'absolute',
+          bottom: 40,
+          borderRadius: 50,
+          shadowColor: '#000',
+          shadowOpacity: 0.1,
+          elevation: 5,
+          marginHorizontal: 15,
         },
         tabBarIcon: ({ color, size }) => {
           let iconName;
 
-          if (route.name === 'Home') {
+          if (route.name === 'ホーム') {
             iconName = homeIcon;
           } else if (route.name === 'Favorite') {
             iconName = favoriteIcon;
-          } else if (route.name === 'UploadPost') {
+          } else if (route.name === '投稿') {
             iconName = postIcon;
-          } else if (route.name === 'Profile') {
+          } else if (route.name === 'マイページ') {
             iconName = profileIcon;
           }
 
-          return <Image source={iconName} style={{ width: 50, height: 50, borderRadius : '50%', marginTop : 30 }} />;
+          return <Image source={iconName} style={{ width: 50, height: 50, marginTop: 30 }} />;
         },
       })}
     >
       <Tabs.Screen
-        fresh={fresh}
-        name="Home"
+        name="ホーム"
         component={Home}
       />
       <Tabs.Screen
-        
         name="Favorite"
         component={Favorite}
       />
       <Tabs.Screen
-        name="UploadPost"
+        name="投稿"
         component={UploadPost}
       />
       <Tabs.Screen
-        name="Profile"
+        name="マイページ"
         component={Profile}
       />
     </Tabs.Navigator>

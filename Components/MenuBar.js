@@ -1,9 +1,10 @@
+
 import { View, Text, StyleSheet, FlatList, Alert, ActivityIndicator } from 'react-native';
 import React, { useState } from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { collection, deleteDoc, doc } from 'firebase/firestore';
-import { firestore } from '../firebase';
+import { firestore } from '../firebase/firebase';
 
 export default function MenuBar({ route, navigation}) {
 

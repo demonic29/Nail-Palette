@@ -1,130 +1,102 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, RefreshControl, SafeAreaView, Alert } from 'react-native';
-import { firestore } from '../firebase';
-import PostCard from '../Components/PostCard';
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { View, FlatList, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { auth, firestore } from '../firebase/firebase';
+import { collection, query, where, getDocs, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import PostCard from './PostCard';
 import Toast from 'react-native-toast-message';
-import Loading from './Loading';
 
-const Home = ({ navigation }) => {
+export default function Home({ navigation }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [undoPost, setUndoPost] = useState(null);
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
+  const fetchPosts = useCallback(async () => {
+    setLoading(true);
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const postsRef = collection(firestore, 'posts');
+        const q = query(postsRef, where('userId', '==', user.uid, orderBy('createdAt', 'desc')));
+        const querySnapshot = await getDocs(q);
+        const userPosts = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setPosts(userPosts);
+      } catch (error) {
+        console.error("Error fetching posts:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
   }, []);
 
   useEffect(() => {
-    const q = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'));
+    fetchPosts();
+  }, [fetchPosts]);
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const postsArray = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setPosts(postsArray);
-      setLoading(false);
-    });
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+      const postsRef = collection(firestore, 'posts');
+      const q = query(postsRef, where('userId', '==', user.uid));
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const userPosts = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setPosts(userPosts);
+      });
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    }
   }, []);
 
-  const deletePost = (postId) => {
-    Alert.alert(
-      '投稿削除',
-      'この投稿を本当に削除しますか？',
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: '削除', style: 'destructive', onPress: () => {
+  if (loading) {
+    return <ActivityIndicator size="large" color="#0000ff" />;
+  }
 
-            // Optimistically remove the post from the UI
-            const postToDelete = posts.find((post) => post.id === postId);
-            setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
-            setUndoPost(postToDelete); // Store the post for possible undo
-  
-            // Show a Toast message with Undo option
-            Toast.show({
-              type: 'info',
-              text1: '投稿を削除しました。',
-              // text2: '削除しない',
-              position: 'bottom',
-              onPress: () => handleUndo(),
-              visibilityTime: 3000, // Display for 3 seconds
-            });
-  
-            // Start the deletion process after a delay
-            setTimeout(async () => {
-              if (!undoPost) { // If undo hasn't been triggered
-                try {
-                  await deleteDoc(doc(firestore, 'posts', postId));
-                } catch (error) {
-                  console.error('Error deleting post:', error);
-                  Alert.alert('Error', 'Could not delete post. Please try again later.');
-                }
-              } else {
-                setUndoPost(null); // Clear the undo state after the delay
-              }
-            }, 3000);
-          }
-        }
-      ]
-    );
-  };
-  
-  const handleUndo = () => {
-    if (undoPost) {
-      setPosts((prevPosts) => [undoPost, ...prevPosts]);
-      setUndoPost(null);
-      Toast.hide();
+  const handleDeletePost = async (postId) => {
+    try {
+      Toast.show({
+        type: 'info',
+        text1: '投稿が削除されました',
+        position: 'bottom'
+      })
+      // Update the state to remove the deleted post from the list
+      setTimeout(async() => {
+        await deleteDoc(doc(firestore, 'posts', postId));
+        setPosts(posts.filter(post => post.id !== postId));
+      }, 2000)
+    } catch (error) {
+      console.error("Error deleting post: ", error);
     }
   };
 
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8C51D7" />
-      </View>
-    );
-  }
-
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <PostCard
-            post={item}
-            navigation={navigation}
-            deletePost={deletePost}
-          />
-        )}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={styles.flatListContent}
-      />
-    </SafeAreaView>
+    <View style={styles.container}>
+      {posts.length === 0 ? (
+        <Text>あなたの投稿をシェーアしよう！</Text>
+      ) : (
+        <FlatList
+          data={posts}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <PostCard
+              post={item}
+              navigation={navigation}
+              deletePost={() => handleDeletePost(item.id)} // Optional
+            />
+          )}
+        />
+      )}
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  flatListContent: {
-    paddingBottom: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#F3F1FF',
   },
 });
-
-export default Home;

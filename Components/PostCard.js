@@ -1,5 +1,8 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Share, Modal, TextInput, ScrollView, Dimensions } from 'react-native';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { auth } from '../firebase/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { firestore } from '../firebase/firebase';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,6 +17,8 @@ export default function PostCard({ navigation, post, deletePost }) {
   const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const scrollViewRef = useRef(null);
+  const [user, setUser] = useState(null);
+  const [image, setImage] = useState(null);
 
   const commentBoxSection = () => {
     setCommentBox(!commentBox);
@@ -66,16 +71,42 @@ export default function PostCard({ navigation, post, deletePost }) {
     return <Text>Loading...</Text>;
   }
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDocRef = doc(firestore, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            console.log(userData)
+            setUser({
+              ...userData,
+              email: user.email,
+            });
+            setImage(userData.userImage);
+          }
+        }
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
             <TouchableOpacity>
-              <Image source={require('../assets/imgs/user_icon.png')} style={{ width: 40, height: 40, borderRadius: 28 }} />
+              <Image source={{ uri: user?.userImage }} style={{ width: 40, height: 40, borderRadius: 28 }} />
+
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-              <Text style={{ fontWeight: 'bold', fontSize: 18 }}>Nakino Aimi</Text>
+              <Text style={{ fontWeight: 'bold', fontSize: 18 }}>{user?.username}</Text>
             </TouchableOpacity>
           </View>
 
@@ -206,7 +237,7 @@ const styles = StyleSheet.create({
     gap: 20
   },
   postImage: {
-    width: width - 50,
+    width: width - 70,
     height: 350,
     borderRadius: 15,
   },

@@ -8,6 +8,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import PostCard from './Components/PostCard';
 import MenuBar from './Components/MenuBar';
 import Toast from 'react-native-toast-message';
+import SignUp from './Components/SignUp';
+import Login from './Components/Login';
 const Stack = createNativeStackNavigator();
 
 export default function MainRouter() {
@@ -15,6 +17,17 @@ export default function MainRouter() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NavigationContainer>
         <Stack.Navigator>
+          <Stack.Screen
+            name='SignUp'
+            component={SignUp}
+            options={{
+              headerShown: false
+            }}
+          />
+          <Stack.Screen
+            name='Login'
+            component={Login}
+          />
           <Stack.Screen
             name='BottomTabs'
             component={BottomTabs}
@@ -24,10 +37,12 @@ export default function MainRouter() {
               headerShown: false,
           }}
           />
+          
           <Stack.Screen
             name='PostCard'
             component={PostCard}
           />
+          
            <Stack.Screen
             name='MenuBar'
             component={MenuBar}
