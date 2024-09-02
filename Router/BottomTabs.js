@@ -7,6 +7,7 @@ import Home from '../Components/Home';
 import Favorite from '../Components/Favorite';
 import UploadPost from '../Components/UploadPost';
 import Profile from '../Components/Profile';
+import FavoriteContext from '../Components/FavoriteContext';
 
 // Icons
 const homeIcon = require('../assets/imgs/home.png');
@@ -65,6 +66,7 @@ export default function BottomTabs() {
         name="マイページ"
         component={Profile}
       />
+     
     </Tabs.Navigator>
   );
 }

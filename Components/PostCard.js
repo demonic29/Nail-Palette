@@ -1,10 +1,12 @@
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Share, Modal, TextInput, ScrollView, Dimensions } from 'react-native';
-import React, { useState, useRef, useEffect } from 'react';
-import { auth } from '../firebase/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { firestore } from '../firebase/firebase';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// firebase settings
+import { getAuth } from 'firebase/auth';
+import { addDoc, collection, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { db, firestore } from '../firebase/firebase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -17,8 +19,6 @@ export default function PostCard({ navigation, post, deletePost }) {
   const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const scrollViewRef = useRef(null);
-  const [user, setUser] = useState(null);
-  const [image, setImage] = useState(null);
 
   const commentBoxSection = () => {
     setCommentBox(!commentBox);
@@ -28,7 +28,35 @@ export default function PostCard({ navigation, post, deletePost }) {
     setLikeIcon(!likeIcon);
   };
 
-  const favoriteIconChange = () => {
+  const favoriteIconChange = async () => {
+    const user = getAuth().currentUser;
+    
+    if (user) {
+      const savedPostRef = doc(firestore, 'savedPosts', `${user.uid}_${post.id}`);
+  
+      if (favoriteIcon) {
+        // Save the post
+        try {
+          await setDoc(savedPostRef, {
+            userId: user.uid,
+            postId: post.id,
+            postData: post,
+          });
+          console.log('Post saved successfully');
+        } catch (err) {
+          console.error('Error saving post', err);
+        }
+      } else {
+        // Unsave the post
+        try {
+          await deleteDoc(savedPostRef);
+          console.log('Post unsaved successfully');
+        } catch (err) {
+          console.error('Error unsaving post', err);
+        }
+      }
+    }
+  
     setFavoriteIcon(!favoriteIcon);
   };
 
@@ -71,30 +99,28 @@ export default function PostCard({ navigation, post, deletePost }) {
     return <Text>Loading...</Text>;
   }
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const user = auth.currentUser;
-        if (user) {
-          const userDocRef = doc(firestore, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            console.log(userData)
-            setUser({
-              ...userData,
-              email: user.email,
-            });
-            setImage(userData.userImage);
-          }
-        }
-      } catch (error) {
-        alert(error.message);
-      }
-    };
+  // Text Expansion
+  const [isExpanded, setIsExpanded] = useState(false); 
 
-    fetchUserData();
-  }, []);
+  // toogle expand
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded);
+  };
+
+  // toogle function
+  const renderCaption = () => {
+    if (post.caption.length > 50) {
+      return (
+        <Text style={styles.caption}>
+          {isExpanded ? post.caption : `${post.caption.substring(0, 50)}...`}
+          <TouchableOpacity onPress={toggleExpand}>
+            <Text style={styles.seeMoreText}>{isExpanded ? ' see less' : ' see more'}</Text>
+          </TouchableOpacity>
+        </Text>
+      );
+    }
+    return <Text style={styles.caption}>{post.caption}</Text>;
+  };
 
   return (
     <View style={styles.container}>
@@ -102,15 +128,14 @@ export default function PostCard({ navigation, post, deletePost }) {
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
             <TouchableOpacity>
-              <Image source={{ uri: user?.userImage }} style={{ width: 40, height: 40, borderRadius: 28 }} />
-
+              <Image source={{ uri: post.userImage }} style={{ width: 40, height: 40, borderRadius: 28 }} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-              <Text style={{ fontWeight: 'bold', fontSize: 18 }}>{user?.username}</Text>
+              <Text style={{ fontWeight: 'bold', fontSize: 18 }}>{post.username}</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={() => navigation.navigate('MenuBar', {post,deletePost})}>
+          <TouchableOpacity onPress={() => navigation.navigate('MenuBar', { post, deletePost })}>
             <Ionicons name="ellipsis-vertical" size={18} />
           </TouchableOpacity>
         </View>
@@ -195,15 +220,20 @@ export default function PostCard({ navigation, post, deletePost }) {
         </View>
 
         <View style={styles.cardFooter}>
-          <Text style={{ fontSize: 16, fontWeight: 'bold' }}>{post.caption}</Text>
+          {renderCaption()}
         </View>
       </View>
 
       <Modal visible={isImagePreviewVisible} transparent={true} onRequestClose={closeImagePreview}>
         <TouchableOpacity style={styles.imagePreviewContainer} onPress={closeImagePreview}>
           <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
-          <TouchableOpacity style={[styles.closeButton, { top: insets.top + 20,
-    right: 20,}]} onPress={closeImagePreview}>
+          <TouchableOpacity
+            style={[
+              styles.closeButton,
+              { top: insets.top + 20, right: 20 },
+            ]}
+            onPress={closeImagePreview}
+          >
             <Ionicons name="close" size={30} color="#FFF" />
           </TouchableOpacity>
         </TouchableOpacity>
@@ -215,58 +245,68 @@ export default function PostCard({ navigation, post, deletePost }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#F3F1FF',
-    paddingHorizontal: 10,
+    marginBottom: 20,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'white',
     borderRadius: 15,
-    padding: 15,
-    marginVertical: 10,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
     elevation: 5,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
-    gap: 20
+    alignItems: 'center',
   },
   postImage: {
-    width: width - 70,
-    height: 350,
+    width: width - 40,
+    height: 300,
     borderRadius: 15,
-  },
-  pagination: {
-    flexDirection: 'row',
-    alignSelf: 'center',
     marginVertical: 10,
-  },
-  dot: {
-    height: 8,
-    width: 8,
-    backgroundColor: '#ccc',
-    borderRadius: 4,
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    backgroundColor: '#8C51D7',
   },
   cardBody: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingHorizontal: 10,
   },
   iconRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 15,
+    gap: 20,
+    paddingVertical: 10,
   },
-  cardFooter: {
-    marginTop: 10,
+  likeCount: {
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  caption: {
+    fontSize: 16,
+    fontWeight: 'normal',
+    lineHeight: 25,
+    // letterSpacing: 0.7
+  },
+  seeMoreText: {
+    color: '#8C51D7',
+    fontWeight: 'bold',
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D9D9D9',
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: '#8C51D7',
   },
   imagePreviewContainer: {
     flex: 1,
@@ -275,12 +315,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   imagePreview: {
-    width: width - 20,
-    height: height / 2,
-    resizeMode: 'contain',
+    width: width * 1,
+    height: height * 0.5,
+    borderRadius: 15,
   },
-  closeButton: {
+  imagePreviewCloseButton: {
     position: 'absolute',
-   
+    top: 40,
+    right: 20,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, Button, TouchableOpacity, ActivityIndicator, FlatList, Alert, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { auth, firestore, storage } from '../firebase/firebase'; // Assuming you have a firebaseConfig file set up
@@ -9,6 +9,10 @@ import PostCard from './PostCard';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import QRCode from 'react-native-qrcode-svg'
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
+
 
 const Profile = ({navigation,}) => {
   const [user, setUser] = useState(null);
@@ -16,6 +20,11 @@ const Profile = ({navigation,}) => {
   const [loading, setLoading] = useState(false);
   const [undoPost, setUndoPost] = useState(null);
 
+const [follower, setFollower] = useState([
+  { count: 112, text: "フォロー" },
+  { count: 123, text: "フォロワー" },
+  { count: 321, text: "いいね" }
+]);
 
   //safe area
   const insets = useSafeAreaInsets();
@@ -31,7 +40,7 @@ const Profile = ({navigation,}) => {
         id: doc.id,
         ...doc.data(),
       }))
-      console.log(postsArray)
+      // console.log(postsArray)
       setPosts(postsArray)
     })
     return () => unsubscribe();
@@ -145,6 +154,8 @@ const Profile = ({navigation,}) => {
       ]
     );
   };
+
+  // undo-post
   const handleUndo = () => {
     if (undoPost) {
       setPosts((prevPosts) => [undoPost, ...prevPosts]);
@@ -154,6 +165,7 @@ const Profile = ({navigation,}) => {
   };
 
 
+  // loading
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -162,11 +174,26 @@ const Profile = ({navigation,}) => {
     );
   }
 
+  // Qrcode
+  const qrCodeRef = useRef()
+  const handleShare = async () => {
+    try {
+      const uri = await captureRef(qrCodeRef, {
+        format: 'png',
+        quality: 1,
+      });
+      await Sharing.shareAsync(uri);
+    } catch (error) {
+      console.error('Error sharing QR code:', error.message);
+    }
+  };
+  
+
   return (
 
     loading ? <ActivityIndicator size="small" color="#0000ff"/> : 
     
-    <ScrollView style={{marginBottom: insets.bottom, paddingTop: insets.top, backgroundColor: '#F3F1FF', height: '100%',}}>
+    <ScrollView style={{marginBottom: insets.bottom, paddingTop: insets.top, backgroundColor: '#F3F1FF', height: '100%', padding: 20}}>
 
       <View style={styles.header}>
 
@@ -175,7 +202,41 @@ const Profile = ({navigation,}) => {
           style={styles.profileImg}
         />
 
-        <Text style={{ fontSize: 18, marginBottom: 50 }}>{user?.username}</Text>
+        <Text style={{ fontSize: 18, marginBottom: 20, fontWeight: 'bold', marginTop: 10 }}>{user?.username}</Text>
+
+        {/* <View ref={qrCodeRef}>
+          <QRCode value='https://example.com/profile/username' />
+        </View> */}
+
+        {/* <Button title='Share Profile' onPress={handleShare}/> */}
+
+        <FlatList
+          data={follower}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <View style={{ alignItems: 'center', justifyContent: 'center', marginVertical: 5, marginRight: 20}}>
+
+              <View style={{borderWidth:1, width:50, height: 50, borderRadius: 25, justifyContent: 'center', borderColor: '#8C51D7',}}>
+                <Text style={{ fontWeight: 'bold',textAlign: 'center',}}>{item.count}</Text>
+              </View>
+
+              <Text style={{ fontSize: 14, fontWeight: 'bold', marginTop: 10 }}>{item.text}</Text>
+            </View>
+          )}
+          horizontal={true}
+          contentContainerStyle={{ marginBottom: 20 }}
+        />
+
+
+        <View style={{flexDirection: 'row',gap: 20, paddingHorizontal: 80}}>
+          <TouchableOpacity style={styles.followBtn}>
+            <Text style={{color: 'white', fontSize: 12}}>プロフィールシートを見る</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.followBtn}>
+            <Text style={{color: 'white', fontSize: 12}}>フォローを外す</Text>
+          </TouchableOpacity>
+        </View>
+
 
         {/* <TouchableOpacity onPress={pickImage} style={{ marginBottom: 20 }}>
           <Text style={{ color: 'blue' }}>Change Profile Image</Text>
@@ -211,6 +272,12 @@ const styles = StyleSheet.create( {
   },
   flatlistContainer: {
     marginBottom: 20
+  },
+  followBtn: {
+    backgroundColor: '#8C51D7',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius:10,
+    marginBottom: 20
   }
-
 })

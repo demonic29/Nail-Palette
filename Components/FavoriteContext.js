@@ -1,18 +1,28 @@
-// FavoriteContext.js
-import React, { createContext, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { View, FlatList, ScrollView, StyleSheet } from 'react-native';
+import PostCard from './PostCard';
 
-export const FavoriteContext = createContext();
-
-export const FavoriteProvider = ({ children }) => {
-  const [favoriteAlbums, setFavoriteAlbums] = useState([]);
-
-  const addAlbum = (album) => {
-    setFavoriteAlbums((prevAlbums) => [...prevAlbums, album]);
-  };
+const FavoriteContext = ({ route, navigation }) => {
+  const { post } = route.params; 
 
   return (
-    <FavoriteContext.Provider value={{ favoriteAlbums, addAlbum }}>
-      {children}
-    </FavoriteContext.Provider>
+    <ScrollView contentContainerStyle={styles.container}>
+      <PostCard
+        post={post}
+        username={post.username}
+        userImage={post.userImage}
+        navigation={navigation}
+      />
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#FFF',
+  },
+});
+
+export default FavoriteContext;

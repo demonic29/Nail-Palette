@@ -21,12 +21,14 @@
     "expo": "~51.0.24",
     "expo-image-manipulator": "~12.0.5",
     "expo-image-picker": "~15.0.7",
+    "expo-sharing": "~12.0.1",
     "expo-status-bar": "~1.12.1",
     "firebase": "^10.12.5",
     "qrcode": "^1.5.4",
     "react": "18.2.0",
     "react-native": "0.74.3",
-    "react-native-gesture-handler": "^2.18.1",
+    "react-native-gesture-handler": "~2.16.1",
+    "react-native-popover-view": "^5.1.8",
     "react-native-qrcode-svg": "^6.3.2",
     "react-native-reanimated": "~3.10.1",
     "react-native-root-toast": "^3.6.0",
@@ -35,6 +37,7 @@
     "react-native-share": "^10.2.1",
     "react-native-skeleton-content": "^1.0.13",
     "react-native-toast-message": "^2.2.0",
+    "react-native-view-shot": "3.8.0",
     "typescript": "~5.3.3"
   },
   "devDependencies": {

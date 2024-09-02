@@ -1,5 +1,4 @@
-// UploadPost.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { auth, firestore, storage } from '../firebase/firebase'; // Adjust the path to your firebaseConfig file
@@ -12,11 +11,32 @@ export default function UploadPost() {
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState([]);
-  const [user, setUser] = useState(null)
+  const [name, setName] = useState(null);
+  const [userImage, setUserImage] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDocRef = doc(firestore, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setName(userData.username);
+            setUserImage(userData.userImage);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error.message);
+        Alert.alert('Error', 'ユーザーデータの取得に失敗しました。');
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   const pickImage = async () => {
-
-    // image-picker
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -29,85 +49,60 @@ export default function UploadPost() {
     }
   };
 
-  // upload-post
   const uploadPost = async () => {
     if (!images.length || !caption) {
       Alert.alert('エラー', '最低 1 つの画像を選択し、キャプションを入力してください。');
       return;
     }
-  
+
     setUploading(true);
-    console.log('Starting upload process...');
-  
+
     try {
       let imageUrls = [];
-  
-      const user = auth.currentUser;
-      if (user) {
-        const userDocRef = doc(firestore, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          console.log(userData);
-          setUser({
-            ...userData,
-            email: user.email,
-          });
-        }
-      }
-  
+
       // image upload
       for (let i = 0; i < images.length; i++) {
         const response = await fetch(images[i]);
         const blob = await response.blob();
         const filename = images[i].substring(images[i].lastIndexOf('/') + 1);
-        const storageRef = ref(storage, `${user.uid}/posts/${filename}`);
-  
-        console.log('Uploading image to storage...');
+        const storageRef = ref(storage, `${auth.currentUser.uid}/posts/${filename}`);
         await uploadBytes(storageRef, blob);
         const downloadURL = await getDownloadURL(storageRef);
         imageUrls.push(downloadURL);
       }
-  
-      console.log('Image(s) uploaded successfully, saving to Firestore...');
+
       await addDoc(collection(firestore, 'posts'), {
-        userId: user.uid,          // Store the user ID
-        username: user.displayName, // Store the username (if available)
-        userImage: user.photoURL,   // Store the user image (if available)
-        imageUrls,                  // Store the image URLs
-        caption,                    // Store the caption
-        createdAt: serverTimestamp(), // Store the timestamp
+        userId: auth.currentUser.uid,
+        username: name,
+        userImage: userImage,
+        imageUrls,
+        caption,
+        createdAt: serverTimestamp(),
       });
-  
-      console.log('Post saved to Firestore successfully.');
+
       setUploading(false);
-      Alert.alert('完成', 'この投稿をアプロードしました。');
+      Alert.alert('完成', 'この投稿をアップロードしました。');
       setImages([]);
       setCaption('');
     } catch (error) {
       setUploading(false);
-      console.error('Error during upload process:', error);
-      Alert.alert('Error', error.message);
+      console.error('Error during upload process:', error.message);
+      Alert.alert('Error', '投稿のアップロードに失敗しました。');
     }
   };
-  
 
   return (
     <ScrollView keyboardDismissMode='on-drag' style={[styles.container, { paddingTop: insets.top }]}>
-
-      {/* image-picker */}
       <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
         <Text style={styles.imagePickerText}>画像を選択</Text>
       </TouchableOpacity>
 
-      {/* image-preview */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewContainer}>
         {images.map((uri, index) => (
           <Image key={index} source={{ uri }} style={styles.imagePreview} />
         ))}
       </ScrollView>
 
-      {/* text */}
       <TextInput
         style={styles.captionInput}
         placeholder="テキストを入力。。。"
@@ -115,7 +110,6 @@ export default function UploadPost() {
         onChangeText={setCaption}
       />
 
-      {/* uploading */}
       <TouchableOpacity style={styles.uploadButton} onPress={uploadPost} disabled={uploading}>
         {uploading ? (
           <ActivityIndicator size="small" color="#FFFFFF" />

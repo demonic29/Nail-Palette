@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, Alert, Image } from 'react-native';
+import { View, TextInput, Button, Text, StyleSheet, Alert, Image, ScrollView } from 'react-native';
 import { auth, firestore, storage } from '../firebase/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
 import { TouchableOpacity } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SignUp = ({ navigation }) => {
   const [username, setUsername] = useState('');
@@ -14,6 +15,8 @@ const SignUp = ({ navigation }) => {
   const [userImage, setUserImage] = useState(null); // New state for the user image
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false); // New state to manage uploading state
+
+  const insets = useSafeAreaInsets();
 
   // Function to pick an image from the device
   const pickImage = async () => {
@@ -86,66 +89,69 @@ const SignUp = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>情報入力</Text>
+    <View style={[styles.container, {paddingTop: insets.top}]}>
 
-      <View style={{ gap: 10 }}>
-        <View>
-          <Text>名前</Text>
-          <TextInput
-            style={styles.input}
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-          />
+      <ScrollView contentContainerStyle={{justifyContent: 'center', flex:1}}>
+        <Text style={styles.header}>情報入力</Text>
+        <View style={{gap: 15}}>
+          <View>
+            <Text style={{fontWeight: '500', marginBottom: 10}}>名前</Text>
+            <TextInput
+              style={styles.input}
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View>
+            <Text style={{fontWeight: '500', marginBottom: 10}}>メール</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View>
+            <Text style={{fontWeight: '500', marginBottom: 10}}>パスワード</Text>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
+
+          <View>
+            <Text style={{fontWeight: '500', marginBottom: 10}}>画像</Text>
+            <TouchableOpacity onPress={pickImage}>
+              {userImage ? (
+                <Image source={{ uri: userImage }} style={styles.image} />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Text>画像を選択</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View>
-          <Text>メール</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
+        <View style={{ flexDirection: 'row', gap: 20, marginTop: 40 }}>
+          <View style={{ borderWidth: 1, paddingHorizontal: 50, borderRadius: 50, borderColor: '#8C51D7' }}>
+            <Button title="戻る" onPress={() => navigation.goBack()} color={'#000'} />
+          </View>
 
-        <View>
-          <Text>パスワード</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View style={{ backgroundColor: '#8C51D7', paddingHorizontal: 50, borderRadius: 50 }}>
+            <Button title={uploading ? "登録中..." : "次へ"} onPress={handleSignUp} color={'#fff'} disabled={uploading} />
+          </View>
         </View>
-
-        <View>
-          <Text>画像</Text>
-          <TouchableOpacity onPress={pickImage}>
-            {userImage ? (
-              <Image source={{ uri: userImage }} style={styles.image} />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Text>画像を選択</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+      </ScrollView>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-      <View style={{ flexDirection: 'row', gap: 30, marginTop: 40 }}>
-        <View style={{ borderWidth: 1, paddingHorizontal: 50, borderRadius: 50, borderColor: '#8C51D7' }}>
-          <Button title="戻る" onPress={() => navigation.navigate('Login')} color={'#000'} />
-        </View>
-
-        <View style={{ backgroundColor: '#8C51D7', paddingHorizontal: 50, borderRadius: 50 }}>
-          <Button title={uploading ? "登録中..." : "次へ"} onPress={handleSignUp} color={'#fff'} disabled={uploading} />
-        </View>
-      </View>
+      
     </View>
   );
 };
@@ -155,13 +161,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 30,
-    backgroundColor: '#fff',
+    backgroundColor: '#F3F1FF',
   },
   header: {
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 20,
+    marginVertical: 20,
   },
   input: {
     height: 40,
