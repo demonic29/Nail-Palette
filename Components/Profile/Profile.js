@@ -1,20 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+// Core Components
 import { View, Text, Image, Button, TouchableOpacity, ActivityIndicator, FlatList, Alert, StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
-import { auth, firestore, storage } from '../firebase/firebase'; // Assuming you have a firebaseConfig file set up
-import { collection, doc, getDoc, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
+import * as Sharing from 'expo-sharing';
+import PostCard from '../PostCard';
+
+// hooks
+import React, { useState, useEffect, useRef } from 'react';
+
+// functions
+import { ScrollView } from 'react-native-gesture-handler';
+import { captureRef } from 'react-native-view-shot';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// firebase
+import { auth, firestore, storage } from '../../firebase/firebase';
 import { deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import PostCard from './PostCard';
-import { ScrollView } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
-import QRCode from 'react-native-qrcode-svg'
-import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
+import { collection, doc, getDoc, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
 
 
-const Profile = ({navigation,}) => {
+const Profile = ({ userId, navigation}) => {
   const [user, setUser] = useState(null);
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -175,25 +181,62 @@ const [follower, setFollower] = useState([
   }
 
   // Qrcode
-  const qrCodeRef = useRef()
-  const handleShare = async () => {
-    try {
-      const uri = await captureRef(qrCodeRef, {
-        format: 'png',
-        quality: 1,
-      });
-      await Sharing.shareAsync(uri);
-    } catch (error) {
-      console.error('Error sharing QR code:', error.message);
-    }
-  };
+  // const qrCodeRef = useRef()
+  // const handleShare = async () => {
+  //   try {
+  //     const uri = await captureRef(qrCodeRef, {
+  //       format: 'png',
+  //       quality: 1,
+  //     });
+  //     await Sharing.shareAsync(uri);
+  //   } catch (error) {
+  //     console.error('Error sharing QR code:', error.message);
+  //   }
+  // };
+  
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userDocRef = doc(firestore, 'users', userId); // Use the passed userId
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setUser({
+            ...userData,
+            email: userDoc.data().email, // Fetch and set user email
+          });
+          setImage(userData.userImage);
+        }
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    fetchUserData();
+  }, [userId]);
+
+    // Fetch user's posts based on the passed userId
+    useEffect(() => {
+      if (userId) {
+        const q = query(collection(firestore, 'posts'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const postsArray = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setPosts(postsArray);
+        });
+        return () => unsubscribe();
+      }
+    }, [userId]);
+    
   
 
   return (
 
     loading ? <ActivityIndicator size="small" color="#0000ff"/> : 
     
-    <ScrollView style={{marginBottom: insets.bottom, paddingTop: insets.top, backgroundColor: '#F3F1FF', height: '100%', padding: 20}}>
+    <ScrollView style={{marginBottom: insets.bottom, paddingTop: insets.top, backgroundColor: '#F3F1FF', height: '100%', padding: 10}}>
 
       <View style={styles.header}>
 
@@ -212,7 +255,7 @@ const [follower, setFollower] = useState([
 
         <FlatList
           data={follower}
-          keyExtractor={(item, index) => index.toString()}
+          keyExtractor={(item, index) => `${item.text}-${index}`}
           renderItem={({ item }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center', marginVertical: 5, marginRight: 20}}>
 
@@ -229,10 +272,10 @@ const [follower, setFollower] = useState([
 
 
         <View style={{flexDirection: 'row',gap: 20, paddingHorizontal: 80}}>
-          <TouchableOpacity style={styles.followBtn}>
+          <TouchableOpacity style={styles.followBtn} onPress={() => navigation.navigate('UserProfileQRCode')}>
             <Text style={{color: 'white', fontSize: 12}}>プロフィールシートを見る</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.followBtn}>
+          <TouchableOpacity style={styles.followBtn}  onPress={() => navigation.navigate('UserProfileQRCode')}>
             <Text style={{color: 'white', fontSize: 12}}>フォローを外す</Text>
           </TouchableOpacity>
         </View>

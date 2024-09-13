@@ -4,10 +4,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 // Components
 import Home from '../Components/Home';
-import Favorite from '../Components/Favorite';
+import Favorite from '../Components/Favorite/Favorite';
 import UploadPost from '../Components/UploadPost';
-import Profile from '../Components/Profile';
-import FavoriteContext from '../Components/FavoriteContext';
+import Profile from '../Components/Profile/Profile';
+import FavoriteContext from '../Components/Favorite/FavoriteContext';
 
 // Icons
 const homeIcon = require('../assets/imgs/home.png');
@@ -53,6 +53,9 @@ export default function BottomTabs() {
       <Tabs.Screen
         name="ホーム"
         component={Home}
+        options={{
+          headerShown: false
+        }}
       />
       <Tabs.Screen
         name="Favorite"

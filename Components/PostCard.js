@@ -7,10 +7,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAuth } from 'firebase/auth';
 import { addDoc, collection, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { db, firestore } from '../firebase/firebase';
+import { LongPressGestureHandler, State } from 'react-native-gesture-handler';
 
 const { width, height } = Dimensions.get('window');
 
-export default function PostCard({ navigation, post, deletePost }) {
+export default function PostCard({ navigation, post, deletePost, profileId }) {
   const insets = useSafeAreaInsets();
   const [likeIcon, setLikeIcon] = useState(true);
   const [favoriteIcon, setFavoriteIcon] = useState(true);
@@ -63,7 +64,7 @@ export default function PostCard({ navigation, post, deletePost }) {
   const onShare = async () => {
     try {
       const result = await Share.share({
-        message: 'React Native | A framework for building native apps using React',
+        message: 'あなたの投稿を他のユーザーにもシェーアしましょう！',
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
@@ -122,24 +123,44 @@ export default function PostCard({ navigation, post, deletePost }) {
     return <Text style={styles.caption}>{post.caption}</Text>;
   };
 
+  // popup tag
+  const [ tagVisible, setTagVisible ] = useState(false);
+
+  const popupTag = ({ nativeEvent }) => {
+    if(nativeEvent.state == State.ACTIVE) {
+      setTagVisible(true)
+    }
+  }
+
+  // const user = auth.currentUser;
+
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
         <View style={styles.header}>
+
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
+
+            {/* user-image */}
             <TouchableOpacity>
               <Image source={{ uri: post.userImage }} style={{ width: 40, height: 40, borderRadius: 28 }} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+
+            {/* user-name */}
+            <TouchableOpacity onPress={() => navigation.navigate('UserProfile', { userId: post.userId })}>
               <Text style={{ fontWeight: 'bold', fontSize: 18 }}>{post.username}</Text>
             </TouchableOpacity>
+
           </View>
 
+          {/* menu-bar */}
           <TouchableOpacity onPress={() => navigation.navigate('MenuBar', { post, deletePost })}>
             <Ionicons name="ellipsis-vertical" size={18} />
           </TouchableOpacity>
         </View>
 
+        {/* post-image */}
         <ScrollView
           horizontal
           pagingEnabled
@@ -150,12 +171,27 @@ export default function PostCard({ navigation, post, deletePost }) {
         >
           {post.imageUrls &&
             post.imageUrls.map((url, index) => (
-              <TouchableOpacity key={index} onPress={() => handleImagePress(url)}>
-                <Image source={{ uri: url }} style={styles.postImage} />
-              </TouchableOpacity>
+              <LongPressGestureHandler onHandlerStateChange={popupTag} minDurationMs={3000}>
+                <TouchableOpacity key={index} onPress={() => handleImagePress(url)}>
+                  <Image source={{ uri: url }} style={styles.postImage} />
+                </TouchableOpacity>
+              </LongPressGestureHandler>
             ))}
         </ScrollView>
 
+        {/* popover tag */}
+        {/* <Modal
+          transparent={true}
+          animationType='fade'
+          visible={tagVisible}
+          onRequestClose={() => setTagVisible(false)}
+        >
+          <View>
+            <Text>Hi</Text>
+          </View>
+        </Modal> */}
+
+        {/* dot pagination */}
         <View style={styles.pagination}>
           {post.imageUrls &&
             post.imageUrls.map((_, index) => (
@@ -163,6 +199,7 @@ export default function PostCard({ navigation, post, deletePost }) {
             ))}
         </View>
 
+        {/* comment box */}
         <View style={styles.cardBody}>
           <View style={styles.iconRow}>
             <TouchableOpacity onPress={likeIconChange}>
@@ -219,11 +256,13 @@ export default function PostCard({ navigation, post, deletePost }) {
           </View>
         </View>
 
+        {/* post caption */}
         <View style={styles.cardFooter}>
           {renderCaption()}
         </View>
       </View>
 
+      {/* preview image */}
       <Modal visible={isImagePreviewVisible} transparent={true} onRequestClose={closeImagePreview}>
         <TouchableOpacity style={styles.imagePreviewContainer} onPress={closeImagePreview}>
           <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
@@ -248,7 +287,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: '#ffffff',
     borderRadius: 15,
     padding: 10,
     shadowColor: '#000',

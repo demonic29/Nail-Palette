@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, FlatList, ScrollView, StyleSheet } from 'react-native';
-import PostCard from './PostCard';
+import PostCard from '../PostCard';
 
 const FavoriteContext = ({ route, navigation }) => {
   const { post } = route.params; 

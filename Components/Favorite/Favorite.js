@@ -3,14 +3,14 @@ import React, { useState, useEffect } from "react";
 import { View, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from "react-native";
 import { getAuth } from "firebase/auth";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { firestore } from "../firebase/firebase";
-import { useNavigation } from '@react-navigation/native'; // Use navigation hook
+import { firestore } from "../../firebase/firebase";
+import { useNavigation } from '@react-navigation/native'; 
 
 const Favorite = () => {
   const [savedPosts, setSavedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const user = getAuth().currentUser;
-  const navigation = useNavigation(); // Use navigation hook
+  const navigation = useNavigation(); 
 
   const numColumns = 3; 
   const screenWidth = Dimensions.get("window").width;
@@ -41,7 +41,7 @@ const Favorite = () => {
   }, [user]);
 
   if (loading) {
-    return <ActivityIndicator size="large" color="#0000ff" />;
+    return <ActivityIndicator size="large" color="#0000ff" style={{flex:1, justifyContent:'center', alignItems: 'center'}} />;
   }
 
   return (

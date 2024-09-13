@@ -1,7 +1,7 @@
 // Album.js
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import React, { useContext } from 'react';
-import { FavoriteContext } from './FavoriteContext';
+import { FavoriteContext } from './Favorite/FavoriteContext';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function Album({ navigation }) {

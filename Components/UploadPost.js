@@ -9,6 +9,7 @@ import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/fires
 export default function UploadPost() {
   const insets = useSafeAreaInsets();
   const [caption, setCaption] = useState('');
+  const [tags, setTags] = useState(''); // Tags as a comma-separated string
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState([]);
   const [name, setName] = useState(null);
@@ -49,9 +50,14 @@ export default function UploadPost() {
     }
   };
 
+  const removeImage = (index) => {
+    const newImages = images.filter((_, i) => i !== index);
+    setImages(newImages);
+  };
+
   const uploadPost = async () => {
-    if (!images.length || !caption) {
-      Alert.alert('エラー', '最低 1 つの画像を選択し、キャプションを入力してください。');
+    if (!images.length || !caption || !tags) {
+      Alert.alert('エラー', '最低 1 つの画像を選択し、キャプションとタグを入力してください。');
       return;
     }
 
@@ -71,12 +77,15 @@ export default function UploadPost() {
         imageUrls.push(downloadURL);
       }
 
+      const tagsArray = tags.split(',').map(tag => tag.trim());
+
       await addDoc(collection(firestore, 'posts'), {
         userId: auth.currentUser.uid,
         username: name,
         userImage: userImage,
         imageUrls,
         caption,
+        tags: tagsArray, // Store tags array in Firestore
         createdAt: serverTimestamp(),
       });
 
@@ -84,6 +93,7 @@ export default function UploadPost() {
       Alert.alert('完成', 'この投稿をアップロードしました。');
       setImages([]);
       setCaption('');
+      setTags('');
     } catch (error) {
       setUploading(false);
       console.error('Error during upload process:', error.message);
@@ -99,15 +109,27 @@ export default function UploadPost() {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewContainer}>
         {images.map((uri, index) => (
-          <Image key={index} source={{ uri }} style={styles.imagePreview} />
+          <View key={index} style={styles.imageWrapper}>
+            <Image source={{ uri }} style={styles.imagePreview} />
+            <TouchableOpacity style={styles.removeButton} onPress={() => removeImage(index)}>
+              <Text style={styles.removeButtonText}>X</Text>
+            </TouchableOpacity>
+          </View>
         ))}
       </ScrollView>
 
       <TextInput
         style={styles.captionInput}
-        placeholder="テキストを入力。。。"
+        placeholder="キャプションを入力。。。"
         value={caption}
         onChangeText={setCaption}
+      />
+
+      <TextInput
+        style={styles.tagsInput}
+        placeholder="タグを入力 (例: nature, travel)"
+        value={tags}
+        onChangeText={setTags}
       />
 
       <TouchableOpacity style={styles.uploadButton} onPress={uploadPost} disabled={uploading}>
@@ -143,13 +165,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 20,
   },
+  imageWrapper: {
+    position: 'relative',
+  },
   imagePreview: {
     width: 100,
     height: 100,
     borderRadius: 15,
     marginRight: 10,
   },
+  removeButton: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'red',
+    borderRadius: 15,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeButtonText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   captionInput: {
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    borderRadius: 15,
+    padding: 15,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 20,
+  },
+  tagsInput: {
     borderWidth: 1,
     borderColor: '#CCCCCC',
     borderRadius: 15,
